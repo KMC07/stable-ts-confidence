@@ -25,14 +25,14 @@ def build_string(texts: List[str], confidence: List[float]):
 
 def test_confidence(sequences: list):
     # -- print sequence
-    texts = []
-    conf = []
-    for s in sequences:
-        texts.append(s['text'])
-        conf.append(s['avg_confidence'])
-    s = build_string(texts, conf)
-    print('Sequences:')
-    [print(x) for x in s]
+    # texts = []
+    # conf = []
+    # for s in sequences:
+    #     texts.append(s['text'])
+    #     conf.append(s['avg_confidence'])
+    # s = build_string(texts, conf)
+    # print('Sequences:')
+    # [print(x) for x in s]
     # -- print words:
     texts = []
     conf = []

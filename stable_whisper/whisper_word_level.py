@@ -45,6 +45,8 @@ def transcribe_word_level(
         compression_ratio_threshold: Optional[float] = 2.4,
         logprob_threshold: Optional[float] = -1.0,
         no_speech_threshold: Optional[float] = 0.6,
+        language_threshold: Optional[float] = 0.6,
+        language_detection_segments: int = 1,
         condition_on_previous_text: bool = True,
         stab=True, top_focus=False, ts_num: int = 10,
         alpha: float = None, print_unstab=False, pbar=False,
@@ -176,14 +178,30 @@ def transcribe_word_level(
         decode_options['max_initial_timestamp'] = None
 
     mel = log_mel_spectrogram(audio)
+    num_frames = mel.shape[-1]
 
     if decode_options.get("language", None) is None:
         if verbose:
             print("Detecting language using up to the first 30 seconds. Use `--language` to specify the language")
-        segment = pad_or_trim(mel, N_FRAMES).to(model.device).to(dtype)
-        _, probs = model.detect_language(segment)
-        decode_options["language"] = max(probs, key=probs.get)
-        print(f"Detected language: {LANGUAGES[decode_options['language']]}")
+        if language_detection_segments is None or language_detection_segments < 1:
+            language_detection_segments = 1
+        seek = 0
+        languages = []
+        while seek < num_frames and seek < N_FRAMES * language_detection_segments:
+            segment = pad_or_trim(mel[:, seek:], N_FRAMES).to(model.device).to(dtype)
+            _, probs = model.detect_language(segment)
+            lang = max(probs, key=probs.get)
+            lang_prob = probs[lang]
+            if language_threshold is not None and lang_prob > language_threshold:
+                decode_options["language"] = lang
+                break
+            else:
+                languages.append(lang)
+                seek += segment.shape[-1]
+        else:
+            # If no language detected for all segments, the majority vote of the highest projected
+            # languages for all segments is used to determine the language.
+            decode_options["language"] = max(set(languages), key=languages.count)
 
     mel = mel.unsqueeze(0)
     language = decode_options["language"]
@@ -333,8 +351,6 @@ def transcribe_word_level(
     upper_quantile = decode_options.pop('upper_quantile', 0.85)
     lower_quantile = decode_options.pop('lower_quantile', 0.15)
     lower_threshold = decode_options.pop('lower_threshold', 0.15)
-
-    num_frames = mel.shape[-1]
 
     with tqdm(total=num_frames, unit='frames', disable=(print_unstab or not pbar)) as tqdm_pbar:
 
@@ -624,7 +640,7 @@ class BeamSearchDecoderWordLevel(BeamSearchDecoder):
         completed = all(
             len(sequences) >= self.max_candidates for sequences in self.finished_sequences
         )
-        return tokens, completed
+        return tokens, completed, sum_logprobs
 
     def finalize(self, preceding_tokens: Tensor, sum_logprobs: Tensor):
         # collect all finished sequences, including patience, and add unfinished ones if not enough
