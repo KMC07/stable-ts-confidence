@@ -20,7 +20,7 @@ from stable_whisper.stabilization import stabilize_timestamps, add_whole_word_ts
 from tqdm import tqdm
 
 
-__all__ = ['transcribe_word_level', 'decode_word_level', 'modify_model', 'load_model']
+__all__ = ['transcribe', 'decode', 'modify_model', 'load_model']
 
 
 # no_caption changed to no_speech in newer whisper commits
@@ -36,7 +36,7 @@ def _get_new_attrs(obj_, attr: str):
 
 
 # modified version of whisper.transcribe.transcribe
-def transcribe_word_level(
+def transcribe(
         model: "Whisper",
         audio: Union[str, np.ndarray, torch.Tensor],
         *,
@@ -808,7 +808,7 @@ class DecodingTaskWordLevel(DecodingTask):
 
 # modified version of whisper.decoding.decode
 @torch.no_grad()
-def decode_word_level(model: "Whisper", mel: Tensor, options: DecodingOptions = DecodingOptions(),
+def decode(model: "Whisper", mel: Tensor, options: DecodingOptions = DecodingOptions(),
                       ts_num: int = None, alpha: float = None, suppress_ts_mask: Tensor = None,
                       suppress_word_ts=False) -> \
         Union[DecodingResult, List[DecodingResult], tuple]:
@@ -868,11 +868,11 @@ def decode_word_level(model: "Whisper", mel: Tensor, options: DecodingOptions = 
 def modify_model(model: Whisper):
     """
     Modifies model instance by:
-        -replacing model.decode with decode_word_level
-        -replacing model.transcribe with transcribe_word_level
+        -replacing model.decode with the new decode method
+        -replacing model.transcribe with the new transcribe method
     """
-    model.decode = MethodType(decode_word_level, model)
-    model.transcribe = MethodType(transcribe_word_level, model)
+    model.decode = MethodType(decode, model)
+    model.transcribe = MethodType(transcribe, model)
 
 
 # modified version of whisper.load_model
