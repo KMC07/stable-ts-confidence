@@ -1012,7 +1012,7 @@ def batch_transcribe(
                             end=min(batch_timestamp_offsets[i] + end_timestamp_position * time_precision,
                                     batch_timestamp_offsets[i] + batch_segment_durations[i]),
                             text_tokens=sliced_tokens[1:-1],
-                            result=result[i],
+                            result=results[i],
                             tokenizer=tokenizers[languages[imap[i]]],
                             segments=all_segments[imap[i]],
                             start_timestamps=word_ts[0].tolist(),
