@@ -957,8 +957,6 @@ def batch_transcribe(
                 else:
                     continue
 
-            print("populate", "batch_segment",dim(batch_segments), "batch_suppress_ts_mask", dim(batch_suppress_ts_mask))
-
             decode_options["prompt"] = [all_tokens[imap[i]][prompt_reset_since[imap[i]]:] for i in range(len(batch_segments))]
             decode_options["language"] = [l for i, l in enumerate(languages) if continue_processing[i]]
 
