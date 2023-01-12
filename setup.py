@@ -19,11 +19,11 @@ setup(
     long_description_content_type='text/markdown',
     python_requires=">=3.7",
     author="Vit",
-    url="https://github.com/Anoncheg1/stable-ts-con",
+    url="https://github.com/KMC07/stable-ts-confidence",
     license="MIT",
     packages=['stable_whisper'],
     install_requires=[
-      "git+https://github.com/openai/whisper.git"
+      "whisper @ git+https://github.com/Blair-Johnson/batch-whisper.git"
     ],
     include_package_data=False
 )
