@@ -1210,7 +1210,7 @@ class BeamSearchDecoderWordLevel(BeamSearchDecoder):
             finished_ts_ls.append(finished_ts)
 
         tokens = torch.tensor(next_tokens, device=tokens.device)
-        self.inference.rearrange_kv_cache(source_indices)
+        #self.inference.rearrange_kv_cache(source_indices)
         self.ts = self.ts[:, source_indices]
 
         # add newly finished sequences to self.finished_sequences
@@ -1315,6 +1315,7 @@ class DecodingTaskWordLevel(DecodingTask):
 
         try:
             for i in range(self.sample_len):
+
                 if self.alpha:
                     logits = self.inference.logits(tokens,
                                                    audio_features * (torch.rand_like(audio_features) * self.alpha + 1))
@@ -1395,6 +1396,7 @@ class DecodingTaskWordLevel(DecodingTask):
                         current_logprobs.append(logprobs)
                         token_confidences[i].append((logprobs.tolist()[0], token_slice.tolist()[0][-1]))
                     tokens = torch.cat(new_tokens, dim=0)
+
                 else:
                     # expand the tokens tensor with the selected next tokens
                     tokens, completed, current_logprobs = self.decoder.update_with_ts(tokens, logits, sum_logprobs, ts)
@@ -1475,10 +1477,13 @@ class DecodingTaskWordLevel(DecodingTask):
             new_tokens = []
             sum_logprobs_new = []
             ts_new = []
+
+            #print("before", "tokens", dim(tokens), "sum_logprobs", dim(sum_logprobs))
+
             for i in range(len(self.decoder)):
                 # get the final candidates for each group, and slice between the first sampled token and EOT
                 token_slice, sum_logprob_slice, ts_slice = self.decoder[i].finalize(tokens[i].unsqueeze(0),
-                                                                          sum_logprobs[i].unsqueeze(0))
+                                                                                    sum_logprobs[i].unsqueeze(0))
                 new_tokens.append(token_slice)
                 sum_logprobs_new.append(sum_logprob_slice[0])
                 ts_new.append(ts_slice[0])
@@ -1489,6 +1494,7 @@ class DecodingTaskWordLevel(DecodingTask):
             # get the final candidates for each group, and slice between the first sampled token and EOT
             tokens, sum_logprobs, ts = self.decoder.finalize(tokens, sum_logprobs)
 
+        #print("after", "tokens", dim(tokens), "sum_logprobs", dim(sum_logprobs), "ts", dim(ts))
         if type(self.sample_begin) == list:
             tokens: List[List[Tensor]] = [
                 [t[self.sample_begin[i]: (t == tokenizer[i].eot).nonzero()[0, 0]] for t in s] for i, s in
