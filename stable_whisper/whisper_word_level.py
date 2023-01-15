@@ -1311,8 +1311,6 @@ class DecodingTaskWordLevel(DecodingTask):
         else:
             token_confidences = []
 
-        #print("beg", "n_batch", n_batch, "sum_logprobs", dim(sum_logprobs), "no_speech", dim(no_speech_probs), "confidence", dim(token_confidences))
-
         try:
             for i in range(self.sample_len):
 
@@ -1417,8 +1415,6 @@ class DecodingTaskWordLevel(DecodingTask):
         finally:
             self.inference.cleanup_caching()
 
-        # print("end", "n_batch", n_batch, "sum_logprobs", dim(sum_logprobs), "no_speech", dim(no_speech_probs),
-        #       "confidence", dim(token_confidences))
         return tokens, sum_logprobs, no_speech_probs, token_confidences
 
     # modified version of whisper.DecodingTask.run
@@ -1455,12 +1451,8 @@ class DecodingTaskWordLevel(DecodingTask):
         audio_features = audio_features.repeat_interleave(self.n_group, dim=0)
         tokens = tokens.repeat_interleave(self.n_group, dim=0).to(audio_features.device)
 
-        #print("before main_loop", "n_audio", n_audio, "decoders", dim(self.decoder), "audio_features", dim(audio_features), "tokens", dim(tokens))
-
         # call the main sampling loop
         tokens, sum_logprobs, no_speech_probs, tc = self._main_loop(audio_features, tokens)
-
-        #print("after main_loop", "n_audio", n_audio, "audio_features", dim(audio_features), "sum_logprobs", dim(sum_logprobs), "no_speech_probs_dim", dim(no_speech_probs), "tokens", dim(tokens), "tc", dim(tc))
 
         # reshape the tensors to have (n_audio, n_group) as the first two dimensions
         audio_features = audio_features[:: self.n_group]
@@ -1478,23 +1470,20 @@ class DecodingTaskWordLevel(DecodingTask):
             sum_logprobs_new = []
             ts_new = []
 
-            #print("before", "tokens", dim(tokens), "sum_logprobs", dim(sum_logprobs))
-
             for i in range(len(self.decoder)):
                 # get the final candidates for each group, and slice between the first sampled token and EOT
                 token_slice, sum_logprob_slice, ts_slice = self.decoder[i].finalize(tokens[i].unsqueeze(0),
                                                                                     sum_logprobs[i].unsqueeze(0))
-                new_tokens.append(token_slice)
+                new_tokens.append(token_slice[0])
                 sum_logprobs_new.append(sum_logprob_slice[0])
                 ts_new.append(ts_slice[0])
-            tokens = torch.cat(new_tokens, dim=0)
+            tokens = new_tokens
             sum_logprobs = sum_logprobs_new
             ts = ts_new
         else:
             # get the final candidates for each group, and slice between the first sampled token and EOT
             tokens, sum_logprobs, ts = self.decoder.finalize(tokens, sum_logprobs)
 
-        #print("after", "tokens", dim(tokens), "sum_logprobs", dim(sum_logprobs), "ts", dim(ts))
         if type(self.sample_begin) == list:
             tokens: List[List[Tensor]] = [
                 [t[self.sample_begin[i]: (t == tokenizer[i].eot).nonzero()[0, 0]] for t in s] for i, s in
